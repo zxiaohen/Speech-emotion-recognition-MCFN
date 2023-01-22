@@ -13,17 +13,13 @@ class AdditiveAttention(nn.Module):
        self.W_q = nn.Linear(query_size, num_hiddens, bias=False)
        self.w_v = nn.Linear(num_hiddens, 1, bias=False)
 
-
-
    def forward(self, queries, keys, values):
 
        queries, keys = self.W_q(queries), self.W_k(keys)   #(queries~[2, 1, 8],keys~[2, 10, 8])
-
        features = queries.unsqueeze(2) + keys.unsqueeze(1)   # features~[2, 1, 10, 8]
        features = torch.tanh(features)  #[2, 1, 10, 8]
        scores = self.w_v(features).squeeze(-1)
        self.attention_weights =nn.functional.softmax(scores,dim=-1)  # (attention_weights~[2,1,10])
-
        return torch.bmm(self.attention_weights, values.transpose(1,2))
 
 #bimodal model for audio-text feature extraction
@@ -84,8 +80,7 @@ class model_bimodal(nn.Module):
             asr_text,
             semantic_input,
             semantic_input_model,
-            semantic_length,
-            align_input, ):
+            semantic_length,):
 
         hidden_states=self.semantic_embed(asr_text["input_ids"]).hidden_states
         semantic_embed=hidden_states[-1]
@@ -173,8 +168,7 @@ class model_acoustic(nn.Module):
             acoustic_input,
             acoustic_length,
             semantic_input,
-            semantic_length,
-            align_input, ):
+            semantic_length, ):
 
         acoustic_pack = nn.utils.rnn.pack_padded_sequence(
                acoustic_input, acoustic_length.cpu(), batch_first=True, enforce_sorted=False)
@@ -224,8 +218,7 @@ class model_semantic(nn.Module):
             asr_text,
             semantic_input,
             semantic_input_model,
-            semantic_length,
-            align_input,):
+            semantic_length,):
 
         hidden_states = self.semantic_embed(asr_text["input_ids"]).hidden_states
 
@@ -234,7 +227,6 @@ class model_semantic(nn.Module):
 
         attention_mask = torch.arange(semantic_input.size(1))[None, :].repeat(semantic_input.size(0), 1).to(semantic_input.device)
         attention_mask = (attention_mask < semantic_length[:, None].repeat(1, semantic_input.size(1))).float()[:, :,None]
-
         attention_score = torch.matmul(semantic_embed, self.attention[None, :, None].repeat(semantic_input.size(0), 1,1))  # [B,A,1]
         attention_score = attention_score / np.sqrt(self.attention.size(0))
 
